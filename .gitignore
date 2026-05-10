@@ -1,0 +1,13 @@
+# Secrets
+.env
+.env*
+
+# Python
+venv
+*.pyc
+*.pyo
+
+# Temporary Data
+temp
+tmp
+
