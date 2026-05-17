@@ -11,3 +11,5 @@ venv
 temp
 tmp
 
+# Others
+.DS_Store
