@@ -23,11 +23,11 @@ automations/
 - Scripts use `#!/usr/bin/env python3` shebang.
 - Use `argparse` for CLI argument parsing.
 - Log to stderr, output results to stdout unless otherwise specified.
-- Agent delegations: coordinator (Carmen) plans, Coder agent implements, Code Reviewer agent reviews.
+- Agent (brains) delegations: coordinator (Carmen) plans, Engineer agent implements, Code Reviewer agent reviews.
 
 ### Agent Delegation Pattern
 When Carmen receives an implementation task:
 1. **Plan** — design the structure, API surface, error handling strategy
-2. **Delegate to Coder** — pass the plan + AGENTS.md context to the Coder agent
+2. **Delegate to Engineer** — pass the plan + AGENTS.md context to the Coder agent
 3. **Delegate to Code Reviewer** — review the output against the plan
-4. **Report** — summarize results to the user
+4. **Report** — summarise results to the user

@@ -1,4 +1,5 @@
 """SlackClient — thin wrapper around slack_sdk.WebClient."""
+from __future__ import annotations
 import os
 import sys
 from pathlib import Path
@@ -56,14 +57,38 @@ class SlackClient:
             print(f"Slack error (conversations.history): {exc.response['error']}", file=sys.stderr)
             sys.exit(1)
 
-    def get_replies(self, channel_id: str, thread_ts: str) -> list[dict]:
+    def get_replies(self, channel_id: str, thread_ts: str, oldest_ts: float | None = None) -> list[dict]:
         """Return all replies in a thread identified by *thread_ts*."""
         try:
-            resp = self._client.conversations_replies(
-                channel=channel_id,
-                ts=thread_ts,
-            )
+            kwargs: dict = dict(channel=channel_id, ts=thread_ts)
+            if oldest_ts is not None:
+                kwargs["oldest"] = str(oldest_ts)
+            resp = self._client.conversations_replies(**kwargs)
             return resp.get("messages", [])
         except SlackApiError as exc:
             print(f"Slack error (conversations.replies): {exc.response['error']}", file=sys.stderr)
+            sys.exit(1)
+
+    def upload_file(
+        self,
+        channel_id: str,
+        file_path: str,
+        filename: str | None = None,
+        title: str | None = None,
+        initial_comment: str | None = None,
+        snippet_type: str | None = None,
+    ) -> dict:
+        """Upload a file to a channel/DM and optionally post an initial comment."""
+        try:
+            resp = self._client.files_upload_v2(
+                channel=channel_id,
+                file=file_path,
+                filename=filename,
+                title=title,
+                initial_comment=initial_comment,
+                snippet_type=snippet_type,
+            )
+            return resp.data
+        except SlackApiError as exc:
+            print(f"Slack error (files.upload): {exc.response['error']}", file=sys.stderr)
             sys.exit(1)

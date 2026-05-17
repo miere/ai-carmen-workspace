@@ -28,22 +28,44 @@ def resolve_channel(client: WebClient, name: str) -> str:
 def resolve_user(client: WebClient, handle: str) -> str:
     """Resolve a user handle (with or without leading @) to a user ID.
 
+    Matches, in order:
+      1. legacy username (member["name"])
+      2. display name   (member["profile"]["display_name"])
+      3. real name      (member["profile"]["real_name"])
+
     Raises ValueError if the user is not found.
     """
     handle = handle.lstrip("@").lower()
     cursor = None
+    members: list[dict] = []
     while True:
         kwargs: dict = {"limit": 200}
         if cursor:
             kwargs["cursor"] = cursor
         resp = client.users_list(**kwargs)
-        for member in resp.get("members", []):
-            if member.get("name", "").lower() == handle:
-                return member["id"]
+        members.extend(resp.get("members", []))
         meta = resp.get("response_metadata", {})
         cursor = meta.get("next_cursor")
         if not cursor:
             break
+
+    # 1. legacy username
+    for member in members:
+        if member.get("name", "").lower() == handle:
+            return member["id"]
+
+    # 2. display name
+    for member in members:
+        profile = member.get("profile", {})
+        if profile.get("display_name", "").lower() == handle:
+            return member["id"]
+
+    # 3. real name
+    for member in members:
+        profile = member.get("profile", {})
+        if profile.get("real_name", "").lower() == handle:
+            return member["id"]
+
     raise ValueError(f"User '{handle}' not found.")
 
 
