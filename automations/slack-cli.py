@@ -3,6 +3,7 @@
 import argparse
 import sys
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 # Ensure libs/ is on the path regardless of CWD
@@ -21,7 +22,7 @@ from slack.resolver import open_dm, resolve_channel, resolve_mentions, resolve_u
 def _format_message(msg: dict) -> str:
     """Format a Slack message dict as '[HH:MM] @user: text'."""
     ts = float(msg.get("ts", 0))
-    dt = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone()
+    dt = datetime.fromtimestamp(ts, tz=ZoneInfo("Australia/Sydney"))
     time_str = dt.strftime("%H:%M")
     user = msg.get("username") or msg.get("user") or "unknown"
     text = msg.get("text", "")
@@ -79,20 +80,20 @@ def cmd_fetch_msgs(args: argparse.Namespace) -> None:
     client = SlackClient()
     channel_id = resolve_channel(client.api, args.channel)
 
-    # Parse --since (UTC). Default: 24 hours ago.
+    # Parse --since (Sydney time). Default: 24 hours ago.
     if args.since:
         try:
             since_dt = datetime.strptime(args.since, "%Y-%m-%d %H:%M:%S").replace(
-                tzinfo=timezone.utc
+                tzinfo=ZoneInfo("Australia/Sydney")
             )
         except ValueError:
             print(
-                "Error: --since must be in format 'YYYY-MM-DD HH:mm:ss' (UTC).",
+                "Error: --since must be in format 'YYYY-MM-DD HH:mm:ss' (Sydney time).",
                 file=sys.stderr,
             )
             sys.exit(1)
     else:
-        since_dt = datetime.now(tz=timezone.utc) - timedelta(hours=24)
+        since_dt = datetime.now(tz=ZoneInfo("Australia/Sydney")) - timedelta(hours=24)
     oldest_ts = since_dt.timestamp()
 
     if args.thread:
@@ -108,20 +109,20 @@ def cmd_fetch_reactions(args: argparse.Namespace) -> None:
     channel_id = resolve_channel(client.api, args.channel)
     user_id = resolve_user(client.api, getattr(args, "from"))
 
-    # Parse --since (UTC). Default: 24 hours ago.
+    # Parse --since (Sydney time). Default: 24 hours ago.
     if args.since:
         try:
             since_dt = datetime.strptime(args.since, "%Y-%m-%d %H:%M:%S").replace(
-                tzinfo=timezone.utc
+                tzinfo=ZoneInfo("Australia/Sydney")
             )
         except ValueError:
             print(
-                "Error: --since must be in format 'YYYY-MM-DD HH:mm:ss' (UTC).",
+                "Error: --since must be in format 'YYYY-MM-DD HH:mm:ss' (Sydney time).",
                 file=sys.stderr,
             )
             sys.exit(1)
     else:
-        since_dt = datetime.now(tz=timezone.utc) - timedelta(hours=24)
+        since_dt = datetime.now(tz=ZoneInfo("Australia/Sydney")) - timedelta(hours=24)
     oldest_ts = since_dt.timestamp()
 
     messages = client.get_history(channel_id, oldest_ts)
@@ -177,7 +178,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--since",
         default=None,
         metavar="YYYY-MM-DD HH:mm:ss",
-        help="Exclude messages sent before this UTC datetime (default: 24h ago).",
+        help="Exclude messages sent before this Sydney datetime (default: 24h ago).",
     )
     p_fetch.set_defaults(func=cmd_fetch_msgs)
 
@@ -202,7 +203,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--since",
         default=None,
         metavar="YYYY-MM-DD HH:mm:ss",
-        help="Exclude messages sent before this UTC datetime (default: 24h ago).",
+        help="Exclude messages sent before this Sydney datetime (default: 24h ago).",
     )
     p_rx.set_defaults(func=cmd_fetch_reactions)
 
