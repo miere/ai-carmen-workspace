@@ -4,8 +4,10 @@
 
 # Python
 venv
+.venv
 *.pyc
 *.pyo
+__pycache__
 
 # Temporary Data
 temp

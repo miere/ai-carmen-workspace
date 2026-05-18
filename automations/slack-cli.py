@@ -103,6 +103,31 @@ def cmd_fetch_msgs(args: argparse.Namespace) -> None:
     _print_messages(messages)
 
 
+def cmd_fetch_reactions(args: argparse.Namespace) -> None:
+    client = SlackClient()
+    channel_id = resolve_channel(client.api, args.channel)
+    user_id = resolve_user(client.api, getattr(args, "from"))
+
+    # Parse --since (UTC). Default: 24 hours ago.
+    if args.since:
+        try:
+            since_dt = datetime.strptime(args.since, "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone.utc
+            )
+        except ValueError:
+            print(
+                "Error: --since must be in format 'YYYY-MM-DD HH:mm:ss' (UTC).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        since_dt = datetime.now(tz=timezone.utc) - timedelta(hours=24)
+    oldest_ts = since_dt.timestamp()
+
+    messages = client.get_history(channel_id, oldest_ts)
+    filtered = [m for m in messages if any(r.get("name") == args.emoji.strip(":") and user_id in r.get("users", []) for r in m.get("reactions", []))]
+    _print_messages(filtered)
+
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
@@ -155,6 +180,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exclude messages sent before this UTC datetime (default: 24h ago).",
     )
     p_fetch.set_defaults(func=cmd_fetch_msgs)
+
+    # fetch-reactions
+    p_rx = sub.add_parser("fetch-reactions", help="Fetch messages a specific user reacted to.")
+    p_rx.add_argument(
+        "--from",
+        required=True,
+        help="User handle (with or without @).",
+    )
+    p_rx.add_argument(
+        "--emoji",
+        required=True,
+        help="Emoji name (e.g. thumbsup, with or without colons).",
+    )
+    p_rx.add_argument(
+        "--channel",
+        required=True,
+        help="Channel name (with or without #).",
+    )
+    p_rx.add_argument(
+        "--since",
+        default=None,
+        metavar="YYYY-MM-DD HH:mm:ss",
+        help="Exclude messages sent before this UTC datetime (default: 24h ago).",
+    )
+    p_rx.set_defaults(func=cmd_fetch_reactions)
 
     return parser
 
