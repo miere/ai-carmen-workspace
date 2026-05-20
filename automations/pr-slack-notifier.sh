@@ -69,17 +69,11 @@ while IFS= read -r pr; do
       "Author: @${author}" \
       "${link}")
 
-    # Post to Slack
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-      -X POST https://slack.com/api/chat.postMessage \
-      -H "Authorization: Bearer ${SLACK_TOKEN}" \
-      -H "Content-Type: application/json; charset=utf-8" \
-      --data-raw "$(jq -n \
-        --arg ch "$CHANNEL" \
-        --arg txt "$msg" \
-        '{channel: $ch, text: $txt, unfurl_links: false, unfurl_media: false}')" 2>/dev/null)
+    # Actually post to Slack
+    SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN} \
+      ./slack-cli.py send-msg --to '#nc-code-reviews' --body "$msg"
 
-    if [ "$http_code" = "200" ]; then
+    if [ "$?" = "0" ]; then
       echo "  ✓ posted: $id" >&2
       NEW_COUNT=$((NEW_COUNT + 1))
     else

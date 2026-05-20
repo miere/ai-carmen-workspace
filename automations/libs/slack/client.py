@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-_ENV_PATH = Path("~/Development/Carmen/.env").expanduser()
+_ENV_PATH = Path("~/.hermes/.env").expanduser()
 
 
 class SlackClient:
