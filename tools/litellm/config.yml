@@ -4,12 +4,11 @@ model_list:
     model: acp/auggie
     acp_model: opus4.7
     acp_session_binding_strategy: prompt_hashing
-    #acp_session_binding_strategy: http_header/X-Hermes-Session-Id
     acp_state_transport: content_marker
     acp_session_ttl_seconds: 1800
     acp_max_sessions: 50
     acp_session_lock_timeout_seconds: 30
-    acp_workspace_dir: /Users/miere/.hermes/
+    acp_workspace_dir: /Users/miere/Development/NurtureCloud/
 
 litellm_settings:
   custom_provider_map:
