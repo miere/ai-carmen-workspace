@@ -73,6 +73,7 @@ while IFS= read -r pr; do
         --arg repo "$repo" \
         --arg num "$num" \
         '{
+          content: "<@&1505927411638730794> <@1505924635001094325> Can you review this pull request to me?\n\($url)\nJust send your summary here and don'\''t forget to tag <@1499002179665793056> back on here.",
           embeds: [{
             title: $title,
             url: $url,

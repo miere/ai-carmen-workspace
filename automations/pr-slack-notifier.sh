@@ -5,7 +5,7 @@ set -euo pipefail
 # Runs as Hermes no_agent cron job; posts directly to Slack API (not stdout delivery)
 
 CARMEN_AUTOMATIONS="$HOME/Development/Carmen/automations"
-STATE_DIR="$CARMEN_AUTOMATIONS/tmp"
+STATE_DIR="$CARMEN_AUTOMATIONS/temp"
 STATE_FILE="$STATE_DIR/prs-slack-state.json"
 CHANNEL="C0B24F579T4"  # nc-code-reviews
 
@@ -36,7 +36,7 @@ for org in miere UpsideRealty; do
 done
 
 # Merge results, filter out bots
-CURRENT=$(echo "$CURRENT" | jq -s 'add | map(select(.author.login != "dependabot[bot]"))')
+#CURRENT=$(echo "$CURRENT" | jq -s 'add | map(select(.author.login != "dependabot[bot]"))')
 
 # ── Find and post new PRs ────────────────────────────────────────────────────
 NEW_COUNT=0
@@ -51,6 +51,17 @@ while IFS= read -r pr; do
     author=$(echo "$pr" | jq -r '.author.login')
     url=$(echo "$pr" | jq -r '.url')
     link="<$url|$repo#$num>"
+
+
+    # Only notify if directly assigned (not just via a team)
+    direct=$(gh pr view "$url" --json reviewRequests --jq \
+      '[.reviewRequests[] | select(.__typename == "User" and .login == "miere")] | length' 2>/dev/null || echo "ERR")
+    if [ "$direct" = "ERR" ]; then
+      echo "  ⚠ API error for $id — posting as fallback" >&2
+    elif [ "$direct" = "0" ]; then
+      echo "  ⊘ indirect (team only): $id" >&2
+      continue
+    fi
 
     # Build message: **title** \n Author: @author \n <link>
     msg=$(printf '%s\n%s\n%s' \
