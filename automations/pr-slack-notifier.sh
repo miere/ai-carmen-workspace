@@ -3,9 +3,9 @@ set -euo pipefail
 
 # PR Slack Notifier — checks for new PR review requests, posts one message per PR
 # Runs as Hermes no_agent cron job; posts directly to Slack API (not stdout delivery)
-
-CARMEN_AUTOMATIONS="$HOME/Development/Carmen/automations"
-STATE_DIR="$CARMEN_AUTOMATIONS/temp"
+CARMEN_DIR="$HOME/Development/Carmen"
+CARMEN_AUTOMATIONS="$CARMEN_DIR/automations"
+STATE_DIR="$CARMEN_DIR/temp"
 STATE_FILE="$STATE_DIR/prs-slack-state.json"
 CHANNEL="C0B24F579T4"  # nc-code-reviews
 
@@ -64,20 +64,23 @@ while IFS= read -r pr; do
     fi
 
     # Build message: **title** \n Author: @author \n <link>
-    msg=$(printf '%s\n%s\n%s' \
+    msg=$(printf '%s\n%s\n%s\n%s' \
       "*${title//\*/\\*}*" \
-      "Author: @${author}" \
+      "Author: _${author}_ " \
+      "Reviewer: @Javier " \
       "${link}")
 
     # Actually post to Slack
-    SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN} \
-      ./slack-cli.py send-msg --to '#nc-code-reviews' --body "$msg"
+    result=$(
+      SLACK_BOT_TOKEN=${SLACK_TOKEN} \
+        "$CARMEN_DIR/slack/slack-cli.py" send-msg --to '#nc-code-reviews' --body "$msg" || echo "FAILED"
+    )
 
-    if [ "$?" = "0" ]; then
+    if [ ! "$result" = "FAILED" ]; then
       echo "  ✓ posted: $id" >&2
       NEW_COUNT=$((NEW_COUNT + 1))
     else
-      echo "  ✗ FAILED ($http_code): $id" >&2
+      echo "  ✗ FAILED: $id" >&2
     fi
 
     # Respect rate limits (1 msg/sec for burst, but we're well under)
@@ -87,11 +90,11 @@ done < <(echo "$CURRENT" | jq -c '.[]')
 
 # ── Update state file ────────────────────────────────────────────────────────
 NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-echo "$CURRENT" | jq -c '[.[] | "\(.repository.nameWithOwner)#\(.number)"]' > /tmp/prs-slack-new.json
+echo "$CURRENT" | jq -s -c '[.[][] | "\(.repository.nameWithOwner)#\(.number)"]' > /tmp/prs-slack-new.json
 jq -n --arg now "$NOW" --slurpfile new /tmp/prs-slack-new.json \
   '{seen_prs: $new[0], last_check: $now}' > "$STATE_FILE"
 rm -f /tmp/prs-slack-new.json
-
+echo "  ✓ State file updated."
 # ── Log summary (to stderr so stdout stays clean) ────────────────────────────
 if [ "$NEW_COUNT" -gt 0 ]; then
   echo "pr-slack-notifier: posted ${NEW_COUNT} new PR(s) — $(date '+%H:%M')" >&2
